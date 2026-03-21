@@ -9,8 +9,6 @@
     <style>
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        .modal-animate { animation: fadeIn 0.2s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
@@ -19,6 +17,7 @@
         <div class="flex items-center space-x-2">
             <i class="fas fa-shield-halved text-indigo-600 text-2xl"></i>
             <span class="text-xl font-bold text-slate-800">TrustScore</span>
+            <span class="text-xs font-medium text-slate-400 uppercase tracking-widest ml-2">Enterprise DPDP</span>
         </div>
     </nav>
 
@@ -31,14 +30,18 @@
         <div class="glass-card p-2 rounded-2xl shadow-xl flex mb-12 border border-slate-200">
             <input type="text" id="urlInput" placeholder="https://example.com" 
                 class="flex-1 px-6 py-4 rounded-xl text-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-            <button onclick="runAudit()" id="auditBtn" class="gradient-bg text-white px-8 py-4 rounded-xl font-bold hover:opacity-90 transition-all">
-                Run Audit
+            <button onclick="runAudit()" id="auditBtn" class="gradient-bg text-white px-8 py-4 rounded-xl font-bold hover:opacity-90 transition-all flex items-center">
+                <span>Run Audit</span>
             </button>
         </div>
 
         <div id="loading" class="hidden text-center py-12">
             <div class="animate-spin text-indigo-600 text-4xl mb-4"><i class="fas fa-circle-notch"></i></div>
-            <p class="text-slate-500 font-medium">Analyzing legal structure...</p>
+            <p class="text-slate-500 font-medium">Analyzing legal compliance structure...</p>
+        </div>
+
+        <div id="errorBox" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded mb-8">
+            <p id="errorMessage" class="text-red-700"></p>
         </div>
 
         <div id="results" class="hidden space-y-8">
@@ -47,35 +50,17 @@
                 <div id="scoreDisplay" class="text-7xl font-black text-indigo-600 mb-2">0/100</div>
                 <div id="riskLevel" class="inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">MODERATE RISK</div>
             </div>
-            <div id="detailsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+            <div id="detailsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                </div>
         </div>
     </main>
 
-    <div id="fixModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl modal-animate">
-            <div class="flex justify-between items-center mb-6">
-                <h3 id="modalTitle" class="text-xl font-bold text-slate-800">How to Fix</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            <div class="bg-indigo-50 p-4 rounded-xl mb-6">
-                <p id="modalSolution" class="text-indigo-900 text-sm leading-relaxed"></p>
-            </div>
-            <div class="space-y-3">
-                <button onclick="closeModal()" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-all">Got it</button>
-                <p class="text-[10px] text-center text-slate-400 uppercase tracking-widest font-bold">Consult with a DPDP Expert for Legal Filing</p>
-            </div>
-        </div>
-    </div>
-
     <script>
-        function openModal(check, solution) {
-            document.getElementById('modalTitle').innerText = `Fix: ${check}`;
-            document.getElementById('modalSolution').innerText = solution;
-            document.getElementById('fixModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('fixModal').classList.add('hidden');
+        // FUNCTION TO HANDLE FIX CLICKS
+        function showFix(checkName, solution) {
+            // Using a standard alert for mobile compatibility
+            alert(`REMEDIATION FOR: ${checkName}\n\n${solution}\n\nNext Steps:\n1. Update website code with required notice.\n2. Add designated contact points.\n3. Re-run Audit to verify.`);
         }
 
         async function runAudit() {
@@ -83,14 +68,17 @@
             const btn = document.getElementById('auditBtn');
             const results = document.getElementById('results');
             const loading = document.getElementById('loading');
+            const errorBox = document.getElementById('errorBox');
 
             if (!urlInput) return alert("Please enter a URL");
 
             results.classList.add('hidden');
+            errorBox.classList.add('hidden');
             loading.classList.remove('hidden');
             btn.disabled = true;
 
             try {
+                // FIXED: Relative URL for Render/Localhost compatibility
                 const response = await fetch('/api/v1/audit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -104,30 +92,38 @@
                 const risk = data.report.trust_score.risk_level;
                 const riskEl = document.getElementById('riskLevel');
                 riskEl.innerText = risk;
-                
+                riskEl.className = `inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${risk === 'LOW RISK' ? 'bg-green-100 text-green-700' : risk === 'MODERATE RISK' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`;
+
                 const grid = document.getElementById('detailsGrid');
                 grid.innerHTML = '';
                 
                 data.report.detailed_analysis.forEach(item => {
                     const card = document.createElement('div');
                     card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100";
+                    
+                    // ESCAPING SINGLE QUOTES TO PREVENT JS CRASHES
+                    const safeSolution = item.solution.replace(/'/g, "\\'");
+                    const safeCheck = item.check.replace(/'/g, "\\'");
+
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-4">
-                            <h3 class="font-bold text-slate-800 text-sm">${item.check}</h3>
+                            <h3 class="font-bold text-slate-800">${item.check}</h3>
                             <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${item.status === 'Pass' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}">${item.status}</span>
                         </div>
-                        <p class="text-xs text-slate-500 mb-4 line-clamp-2">${item.solution}</p>
+                        <p class="text-sm text-slate-500 mb-3">${item.solution}</p>
                         ${item.status !== 'Pass' ? `
-                            <button onclick="openModal('${item.check}', '${item.solution}')" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-tight flex items-center">
-                                How to fix <i class="fas fa-arrow-right ml-1"></i>
-                            </button>` : ''}
+                            <div onclick="showFix('${safeCheck}', '${safeSolution}')" 
+                                 class="text-[11px] font-bold text-indigo-600 cursor-pointer hover:underline uppercase tracking-tight">
+                                 How to fix →
+                            </div>` : ''}
                     `;
                     grid.appendChild(card);
                 });
 
                 results.classList.remove('hidden');
             } catch (err) {
-                alert(err.message);
+                document.getElementById('errorMessage').innerText = err.message;
+                errorBox.classList.remove('hidden');
             } finally {
                 loading.classList.add('hidden');
                 btn.disabled = false;
