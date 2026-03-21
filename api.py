@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 # 1. INTEGRATED LOGGER
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("TrustScore_API")
+logger = logging.getLogger("TrustScore_Pro")
 
 # 2. INTEGRATED SCANNER
 class SecureScanner:
@@ -31,7 +31,7 @@ class SecureScanner:
             logger.error(f"Scan failed for {url}: {e}")
             return None
 
-# 3. INTEGRATED ANALYZER
+# 3. INTEGRATED ANALYZER WITH SOLUTIONS
 class DPDPAnalyzer:
     def __init__(self, parsed_html: BeautifulSoup):
         self.soup = parsed_html
@@ -39,34 +39,50 @@ class DPDPAnalyzer:
         self.cookie_keywords = re.compile(r'(cookie|consent|tracking|gdpr|dpdp)', re.IGNORECASE)
 
     def check_privacy_policy(self) -> Dict[str, Any]:
-        policy_links = [a['href'] for a in self.soup.find_all('a', href=True) if self.privacy_keywords.search(a.get_text())]
-        status = "Pass" if policy_links else "Fail"
-        return {"check": "Privacy Policy", "status": status, "found_links": list(set(policy_links))}
+        links = [a['href'] for a in self.soup.find_all('a', href=True) if self.privacy_keywords.search(a.get_text())]
+        passed = len(links) > 0
+        return {
+            "check": "Privacy Policy",
+            "status": "Pass" if passed else "Fail",
+            "solution": "None needed." if passed else "Draft a DPDP-compliant Privacy Policy and link it clearly in your footer."
+        }
 
     def check_cookie_consent(self) -> Dict[str, Any]:
         found = bool(self.soup.find_all(attrs={"id": self.cookie_keywords, "class": self.cookie_keywords}))
-        return {"check": "Cookie Banner", "status": "Pass" if found else "Warning", "details": "Found" if found else "Not detected"}
+        return {
+            "check": "Cookie Banner",
+            "status": "Pass" if found else "Warning",
+            "solution": "None needed." if found else "Implement a clear opt-in cookie banner that specifically mentions data processing purposes."
+        }
 
     def check_form_consent(self) -> Dict[str, Any]:
         forms = self.soup.find_all('form')
-        failed = sum(1 for f in forms if not f.find_all('input', type='checkbox'))
-        status = "Pass" if failed == 0 and forms else "Fail"
-        return {"check": "Form Consent", "status": status, "total_forms_found": len(forms)}
+        no_consent = sum(1 for f in forms if not f.find_all('input', type='checkbox'))
+        passed = (no_consent == 0 and len(forms) > 0)
+        return {
+            "check": "Form Consent",
+            "status": "Pass" if passed else "Fail",
+            "solution": "None needed." if passed else "Add mandatory 'I agree to the processing of my personal data' checkboxes to all user input forms."
+        }
 
     def check_privacy_officer(self) -> Dict[str, Any]:
         text = self.soup.get_text(separator=' ', strip=True)
         officer_pattern = re.compile(r'\b(grievance officer|data protection officer|privacy officer)\b', re.IGNORECASE)
         found = officer_pattern.search(text)
-        return {"check": "Grievance Officer", "status": "Pass" if found else "Fail", "matched_text": found.group(0) if found else "None"}
+        return {
+            "check": "Grievance Officer",
+            "status": "Pass" if found else "Fail",
+            "solution": "None needed." if found else "Section 10 of the DPDP Act requires a designated Grievance Officer's contact info to be public. Add a 'Grievance Officer' section to your contact page."
+        }
 
     def run_full_audit(self) -> Dict[str, Any]:
-        p, c, f, o = self.check_privacy_policy(), self.check_cookie_consent(), self.check_form_consent(), self.check_privacy_officer()
-        score = (30 if p["status"]=="Pass" else 0) + (20 if c["status"]=="Pass" else 10 if c["status"]=="Warning" else 0) + (10 if f["status"]=="Pass" else 0) + (40 if o["status"]=="Pass" else 0)
+        results = [self.check_privacy_policy(), self.check_cookie_consent(), self.check_form_consent(), self.check_privacy_officer()]
+        score = sum(30 if r["status"]=="Pass" else (10 if r["status"]=="Warning" else 0) for r in results)
         risk = "LOW RISK" if score >= 80 else "MODERATE RISK" if score >= 50 else "CRITICAL RISK"
-        return {"trust_score": {"score": score, "risk_level": risk}, "checks": {"privacy_policy": p, "cookie_consent": c, "form_consent": f, "privacy_officer": o}}
+        return {"trust_score": {"score": score, "risk_level": risk}, "detailed_analysis": results}
 
 # 4. API & ROUTES
-app = FastAPI(title="TrustScore DPDP Auditor")
+app = FastAPI(title="TrustScore DPDP Auditor Pro")
 
 app.add_middleware(
     CORSMiddleware,
@@ -83,22 +99,22 @@ class AuditRequest(BaseModel):
 def serve_dashboard():
     if os.path.exists("index.html"):
         return FileResponse("index.html")
-    return {"error": "index.html not found"}
+    return {"error": "Dashboard HTML (index.html) not found in root directory."}
 
 @app.post("/api/v1/audit")
 def run_audit(request: AuditRequest):
-    logger.info(f"Auditing: {request.target_url}")
-    scanner = SecureScanner(timeout=15)
+    logger.info(f"Enterprise Audit initiated: {request.target_url}")
+    scanner = SecureScanner()
     parsed_html = scanner.fetch_page_content(request.target_url)
     if not parsed_html:
-        raise HTTPException(status_code=400, detail="Could not reach website.")
+        raise HTTPException(status_code=400, detail="Target website unreachable. Check URL formatting.")
     try:
         analyzer = DPDPAnalyzer(parsed_html)
         report = analyzer.run_full_audit()
-        return {"success": True, "target": request.target_url, "data": report}
+        return {"success": True, "target": request.target_url, "report": report}
     except Exception as e:
-        logger.error(f"Audit Error: {e}")
-        raise HTTPException(status_code=500, detail="Internal analysis error.")
+        logger.error(f"Audit Failure: {e}")
+        raise HTTPException(status_code=500, detail="An internal error occurred during compliance analysis.")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
