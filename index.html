@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrustScore | DPDP Auditor</title>
+    <title>TrustScore | Enterprise DPDP Compliance</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .locked-text { filter: blur(4px); user-select: none; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
@@ -57,10 +58,19 @@
     </main>
 
     <script>
-        // FUNCTION TO HANDLE FIX CLICKS
-        function showFix(checkName, solution) {
-            // Using a standard alert for mobile compatibility
-            alert(`REMEDIATION FOR: ${checkName}\n\n${solution}\n\nNext Steps:\n1. Update website code with required notice.\n2. Add designated contact points.\n3. Re-run Audit to verify.`);
+        // THE PAYWALL UNLOCK FUNCTION
+        function unlockFix(checkName) {
+            // ---> PUT YOUR WHATSAPP NUMBER HERE <---
+            const myWhatsApp = "917393849303"; 
+            
+            const message = `Hi Abhishek, I just ran a DPDP Audit on TrustScore. My ${checkName} failed and I want to pay ₹9999 to unlock the legal fix and template.`;
+            const url = `https://wa.me/${myWhatsApp}?text=${encodeURIComponent(message)}`;
+            
+            const confirmPay = confirm(`PREMIUM FEATURE\n\nTo unlock the specific legal code, DPDP-compliant wording, and implementation guide for "${checkName}", you can purchase our Professional Compliance Kit for ₹499.\n\nWould you like to proceed to payment via WhatsApp?`);
+            
+            if(confirmPay) {
+                window.open(url, '_blank');
+            }
         }
 
         async function runAudit() {
@@ -78,7 +88,6 @@
             btn.disabled = true;
 
             try {
-                // FIXED: Relative URL for Render/Localhost compatibility
                 const response = await fetch('/api/v1/audit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -99,10 +108,9 @@
                 
                 data.report.detailed_analysis.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100";
+                    card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden";
                     
-                    // ESCAPING SINGLE QUOTES TO PREVENT JS CRASHES
-                    const safeSolution = item.solution.replace(/'/g, "\\'");
+                    const isLocked = item.status !== 'Pass';
                     const safeCheck = item.check.replace(/'/g, "\\'");
 
                     card.innerHTML = `
@@ -110,12 +118,19 @@
                             <h3 class="font-bold text-slate-800">${item.check}</h3>
                             <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${item.status === 'Pass' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}">${item.status}</span>
                         </div>
-                        <p class="text-sm text-slate-500 mb-3">${item.solution}</p>
-                        ${item.status !== 'Pass' ? `
-                            <div onclick="showFix('${safeCheck}', '${safeSolution}')" 
-                                 class="text-[11px] font-bold text-indigo-600 cursor-pointer hover:underline uppercase tracking-tight">
-                                 How to fix →
-                            </div>` : ''}
+                        
+                        <p class="text-sm text-slate-500 mb-3 ${isLocked ? 'locked-text' : ''}">${item.solution}</p>
+                        
+                        ${isLocked ? `
+                            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] mt-10">
+                                <button onclick="unlockFix('${safeCheck}')" 
+                                     class="w-[80%] py-3 bg-indigo-600 text-white text-[12px] font-bold rounded-lg text-center cursor-pointer shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest border-2 border-indigo-700">
+                                     <i class="fas fa-lock mr-2"></i> Unlock Fix (₹499)
+                                </button>
+                            </div>` : `
+                            <div class="text-[11px] font-bold text-green-600 uppercase tracking-tight">
+                                 <i class="fas fa-check-circle mr-1"></i> Compliant
+                            </div>`}
                     `;
                     grid.appendChild(card);
                 });
