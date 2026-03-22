@@ -9,7 +9,6 @@
     <style>
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        .locked-text { filter: blur(4px); user-select: none; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
@@ -58,18 +57,48 @@
     </main>
 
     <script>
-        // THE PAYWALL UNLOCK FUNCTION
+        // --- FOUNDER SETTINGS ---
+        const myWhatsApp = "917393849303"; 
+        const myUPI = "7393849303@fampay"; // Make sure this is your real FamPay ID
+        const SECRET_KEY = "DPDP-PRO-2026"; 
+
+        // --- CHECK IF USER HAS 30-DAY PREMIUM ---
+        function checkPremiumStatus() {
+            const expiry = localStorage.getItem('trustscore_premium_expiry');
+            if (expiry && new Date().getTime() < parseInt(expiry)) {
+                return true;
+            }
+            return false;
+        }
+
+        // --- THE LICENSE KEY ACTIVATOR ---
+        function activateLicense() {
+            const userInput = prompt("Enter your 30-Day License Key (Contact Support on WhatsApp to purchase):");
+            if (userInput === SECRET_KEY) {
+                const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+                const expiryTime = new Date().getTime() + thirtyDays;
+                localStorage.setItem('trustscore_premium_expiry', expiryTime);
+                alert("SUCCESS! 🚀 Premium Access Unlocked for 30 Days. Please Re-Run the Audit to see your legal solutions.");
+            } else if (userInput) {
+                alert("❌ Invalid License Key. Please try again or contact support.");
+            }
+        }
+
+        // --- THE PAYWALL UNLOCK FUNCTION WITH DIRECT UPI ---
         function unlockFix(checkName) {
-            // ---> PUT YOUR WHATSAPP NUMBER HERE <---
-            const myWhatsApp = "917393849303"; 
+            const message = `Hi Abhishek, I am ready to pay ₹30,500 for the 30-Day License Key to unlock the DPDP fixes for ${checkName}.`;
+            const whatsappUrl = `https://wa.me/${myWhatsApp}?text=${encodeURIComponent(message)}`;
             
-            const message = `Hi Abhishek, I just ran a DPDP Audit on TrustScore. My ${checkName} failed and I want to pay ₹9999 to unlock the legal fix and template.`;
-            const url = `https://wa.me/${myWhatsApp}?text=${encodeURIComponent(message)}`;
-            
-            const confirmPay = confirm(`PREMIUM FEATURE\n\nTo unlock the specific legal code, DPDP-compliant wording, and implementation guide for "${checkName}", you can purchase our Professional Compliance Kit for ₹499.\n\nWould you like to proceed to payment via WhatsApp?`);
+            const confirmPay = confirm(`PREMIUM FEATURE\n\nTo unlock the specific legal code and implementation guide for "${checkName}", you need a 30-Day License Key (₹9,999).\n\nClick OK to open your UPI app and pay, then send the screenshot to WhatsApp to get your key.`);
             
             if(confirmPay) {
-                window.open(url, '_blank');
+                const upiLink = `upi://pay?pa=${myUPI}&pn=TrustScore%20Premium&am=9999&cu=INR&tn=License%20Key`;
+                window.location.href = upiLink;
+                
+                setTimeout(() => {
+                    const goWa = confirm(`If your payment app didn't open automatically, send ₹9,999 to:\n${myUPI}\n\nClick OK to open WhatsApp and send the payment screenshot to get your License Key.`);
+                    if(goWa) window.open(whatsappUrl, '_blank');
+                }, 1500);
             }
         }
 
@@ -106,31 +135,43 @@
                 const grid = document.getElementById('detailsGrid');
                 grid.innerHTML = '';
                 
+                const isPremium = checkPremiumStatus();
+
                 data.report.detailed_analysis.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden";
+                    // Flex column and mt-auto ensures the buttons stay at the bottom
+                    card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col";
                     
-                    const isLocked = item.status !== 'Pass';
+                    const isLocked = item.status !== 'Pass' && !isPremium;
                     const safeCheck = item.check.replace(/'/g, "\\'");
 
                     card.innerHTML = `
-                        <div class="flex justify-between items-start mb-4">
+                        <div class="flex justify-between items-start mb-3">
                             <h3 class="font-bold text-slate-800">${item.check}</h3>
                             <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${item.status === 'Pass' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}">${item.status}</span>
                         </div>
                         
-                        <p class="text-sm text-slate-500 mb-3 ${isLocked ? 'locked-text' : ''}">${item.solution}</p>
+                        <p class="text-sm text-slate-600 mb-6 leading-relaxed">${item.solution}</p>
                         
-                        ${isLocked ? `
-                            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] mt-10">
-                                <button onclick="unlockFix('${safeCheck}')" 
-                                     class="w-[80%] py-3 bg-indigo-600 text-white text-[12px] font-bold rounded-lg text-center cursor-pointer shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest border-2 border-indigo-700">
-                                     <i class="fas fa-lock mr-2"></i> Unlock Fix (₹499)
-                                </button>
-                            </div>` : `
-                            <div class="text-[11px] font-bold text-green-600 uppercase tracking-tight">
-                                 <i class="fas fa-check-circle mr-1"></i> Compliant
-                            </div>`}
+                        <div class="mt-auto">
+                            ${isLocked ? `
+                                <div class="flex flex-col space-y-2">
+                                    <button onclick="unlockFix('${safeCheck}')" 
+                                         class="w-full py-3 bg-indigo-600 text-white text-[12px] font-bold rounded-lg text-center shadow-md hover:bg-indigo-700 transition-all uppercase tracking-widest border border-indigo-700">
+                                         <i class="fas fa-lock mr-2"></i> Unlock Fix (₹9,999)
+                                    </button>
+                                    <button onclick="activateLicense()" 
+                                         class="w-full py-2 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg text-center hover:bg-slate-200 transition-all uppercase tracking-widest">
+                                         <i class="fas fa-key mr-1"></i> I have a License Key
+                                    </button>
+                                </div>` : item.status !== 'Pass' ? `
+                                <div class="text-[11px] font-bold text-indigo-600 uppercase tracking-tight p-3 bg-indigo-50 rounded text-center border border-indigo-100">
+                                     <i class="fas fa-unlock mr-1"></i> Premium Unlocked
+                                </div>` : `
+                                <div class="text-[11px] font-bold text-green-600 uppercase tracking-tight p-3 bg-green-50 rounded text-center border border-green-100">
+                                     <i class="fas fa-check-circle mr-1"></i> Compliant
+                                </div>`}
+                        </div>
                     `;
                     grid.appendChild(card);
                 });
