@@ -31,7 +31,7 @@ class SecureScanner:
             logger.error(f"Scan failed for {url}: {e}")
             return None
 
-# 3. INTEGRATED ANALYZER WITH SOLUTIONS
+# 3. INTEGRATED ANALYZER (WITH PAYWALL TEASERS)
 class DPDPAnalyzer:
     def __init__(self, parsed_html: BeautifulSoup):
         self.soup = parsed_html
@@ -44,7 +44,7 @@ class DPDPAnalyzer:
         return {
             "check": "Privacy Policy",
             "status": "Pass" if passed else "Fail",
-            "solution": "None needed." if passed else "Draft a DPDP-compliant Privacy Policy and link it clearly in your footer."
+            "solution": "Compliant." if passed else "CRITICAL: Missing or non-compliant Privacy Policy (Section 8 violation). Fines reach ₹250 Cr. Unlock to get the exact DPDP-compliant legal template."
         }
 
     def check_cookie_consent(self) -> Dict[str, Any]:
@@ -52,7 +52,7 @@ class DPDPAnalyzer:
         return {
             "check": "Cookie Banner",
             "status": "Pass" if found else "Warning",
-            "solution": "None needed." if found else "Implement a clear opt-in cookie banner that specifically mentions data processing purposes."
+            "solution": "Compliant." if found else "WARNING: Active tracking without explicit consent detected. Unlock to get the compliant cookie banner code and implementation guide."
         }
 
     def check_form_consent(self) -> Dict[str, Any]:
@@ -62,7 +62,7 @@ class DPDPAnalyzer:
         return {
             "check": "Form Consent",
             "status": "Pass" if passed else "Fail",
-            "solution": "None needed." if passed else "Add mandatory 'I agree to the processing of my personal data' checkboxes to all user input forms."
+            "solution": "Compliant." if passed else "CRITICAL: Data collection forms lack mandatory explicit consent checkboxes. Unlock to get the legally compliant frontend code."
         }
 
     def check_privacy_officer(self) -> Dict[str, Any]:
@@ -72,7 +72,7 @@ class DPDPAnalyzer:
         return {
             "check": "Grievance Officer",
             "status": "Pass" if found else "Fail",
-            "solution": "None needed." if found else "Section 10 of the DPDP Act requires a designated Grievance Officer's contact info to be public. Add a 'Grievance Officer' section to your contact page."
+            "solution": "Compliant." if found else "CRITICAL: Missing Grievance Officer details (Section 10 violation). Unlock to get the legally required contact section template."
         }
 
     def run_full_audit(self) -> Dict[str, Any]:
